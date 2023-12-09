@@ -225,7 +225,7 @@ POWER_MEDIUM = 0b01
 POWER_LOW = 0b00
 
 # dtmf_flags
-PTTID_LIST = ["off", "BOT", "EOT", "BOTH"]
+PTTID_LIST = ["OFF", "UP CODE", "DOWN CODE", "UP+DOWN CODE", "APOLLO QUINDAR"]
 
 # power
 UVK5_POWER_LEVELS = [chirp_common.PowerLevel("Low",  watts=1.50),
@@ -237,19 +237,19 @@ UVK5_POWER_LEVELS = [chirp_common.PowerLevel("Low",  watts=1.50),
 SCRAMBLER_LIST = ["off", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
 
 # channel display mode
-CHANNELDISP_LIST = ["Frequency", "Channel No", "Channel Name"]
+CHANNELDISP_LIST = ["Frequency", "Channel No", "Channel Name", "Name + Frequency"]
 # battery save
 BATSAVE_LIST = ["OFF", "1:1", "1:2", "1:3", "1:4"]
 
 # Backlight auto mode
-BACKLIGHT_LIST = ["Off", "1s", "2s", "3s", "4s", "5s"]
+BACKLIGHT_LIST = ["Off", "5s", "10s", "20s", "1min", "2min", "4min", "Always On"]
 
 # Crossband receiving/transmitting
 CROSSBAND_LIST = ["Off", "Band A", "Band B"]
 DUALWATCH_LIST = CROSSBAND_LIST
 
 # steps
-STEPS = [2.5, 5.0, 6.25, 10.0, 12.5, 25.0, 8.33]
+STEPS = [2.5, 5, 6.25, 10, 12.5, 25, 8.33, 0.01, 0.05, 0.1, 0.25, 0.5, 1, 1.25, 15, 30, 50, 100, 125, 250, 500]
 
 # ctcss/dcs codes
 TMODES = ["", "Tone", "DTCS", "DTCS"]
@@ -307,17 +307,6 @@ FMMAX = 108.0
 
 # bands supported by the UV-K5
 BANDS = {
-        0: [50.0, 76.0],
-        1: [108.0, 135.9999],
-        2: [136.0, 199.9990],
-        3: [200.0, 299.9999],
-        4: [350.0, 399.9999],
-        5: [400.0, 469.9999],
-        6: [470.0, 600.0]
-        }
-
-# for radios with modified firmware:
-BANDS_NOLIMITS = {
         0: [18.0, 76.0],
         1: [108.0, 135.9999],
         2: [136.0, 199.9990],
@@ -597,13 +586,8 @@ def do_upload(radio):
 
 def _find_band(self, hz):
     mhz = hz/1000000.0
-    if self.FIRMWARE_NOLIMITS:
-        B = BANDS_NOLIMITS
-    else:
-        B = BANDS
-
-    for a in B:
-        if mhz >= B[a][0] and mhz <= B[a][1]:
+    for a in BANDS:
+        if mhz >= BANDS[a][0] and mhz <= BANDS[a][1]:
             return a
     return False
 
@@ -612,11 +596,10 @@ def _find_band(self, hz):
 class UVK5Radio(chirp_common.CloneModeRadio):
     """Quansheng UV-K5"""
     VENDOR = "Quansheng"
-    MODEL = "UV-K5"
+    MODEL = "UV-K5 (egzumer)"
     BAUD_RATE = 38400
     NEEDS_COMPAT_SERIAL = False
     FIRMWARE_VERSION = ""
-    FIRMWARE_NOLIMITS = False
 
     def get_prompts(x=None):
         rp = chirp_common.RadioPrompts()
@@ -667,7 +650,7 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                                 "->Tone", "->DTCS", "DTCS->", "DTCS->DTCS"]
 
         rf.valid_characters = chirp_common.CHARSET_ASCII
-        rf.valid_modes = ["FM", "NFM", "AM", "NAM"]
+        rf.valid_modes = ["FM", "NFM", "AM", "NAM", "USB", "NUSB"]
         rf.valid_tmodes = ["", "Tone", "TSQL", "DTCS", "Cross"]
 
         rf.valid_skips = [""]
@@ -1865,13 +1848,6 @@ class UVK5Radio(chirp_common.CloneModeRadio):
         rs = RadioSetting("driver_ver", "Driver version", val)
         roinfo.append(rs)
 
-        # No limits version for hacked firmware
-        val = RadioSettingValueBoolean(self.FIRMWARE_NOLIMITS)
-        val.set_mutable(False)
-        rs = RadioSetting("nolimits", "Limits disabled for modified firmware",
-                          val)
-        roinfo.append(rs)
-
         return top
 
     # Store details about a high-level memory to the memory map
@@ -2010,19 +1986,3 @@ class UVK5Radio(chirp_common.CloneModeRadio):
                     _mem4.channel_attributes[number].is_scanlist2 = 0
 
         return mem
-
-
-@directory.register
-class UVK5Radio_nolimit(UVK5Radio):
-    VENDOR = "Quansheng"
-    MODEL = "UV-K5 (modified firmware)"
-    VARIANT = "nolimits"
-    FIRMWARE_NOLIMITS = True
-
-    def get_features(self):
-        rf = UVK5Radio.get_features(self)
-        # This is what the BK4819 chip supports
-        rf.valid_bands = [(18000000,  620000000),
-                          (840000000, 1300000000)
-                          ]
-        return rf
